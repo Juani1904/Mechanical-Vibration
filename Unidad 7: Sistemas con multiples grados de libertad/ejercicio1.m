@@ -76,10 +76,13 @@ function ejercicio1
     #Entonces vamos a tener un paso del tiempo comun a todos los demas de:
     tiempo=0:dt:tf; #Esta variable no se modifica
 
-    #Setear valores iniciales con tantos elementos como GL tenga el sistema y en su orden correspondiente
     #Solamente se utiliza en sistema libre, cuando no sea ese el caso simplemente colocar 0 en ese GL
     x0=[0.3;-0.8;0.3];
     x0prima=[0;0;0];
+    #Vector de amplitudes de fuerza(Se usa para cargas armonicas). Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
+    AmplitudF=[0,0,5000];
+    #Vector de frecuencias forzadas(Se usa para cargas armonicas). Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
+    frecWf=[0,0,1.1*frecW(1)];
 
 
     #LIBRE
@@ -95,7 +98,23 @@ function ejercicio1
     endif
 
     #CARGA ARMONICA
+    if tipoDeCarga==2
+      #Discretizamos la carga
+      contador=1;
+      for t=tiempo
+        Fdiscreta(contador)=AmplitudF(i)*sin(frecWf(i)*t);
+        contador++;
+      endfor
+      #Pasamos la carga a coordenadas modales
+      Fmodal=Xnorm(:,i)'*Fdiscreta';
 
+      #Calculamos los parametros para posteriormente calcular y
+      beta=frecWf(i)/frecW(i);
+      D=1/(sqrt((1-beta^2)^2+(2*Ramort(i)*beta)^2));
+      #Calculamos la respuesta en coordenadas modales y con la formula correspondiente a respuesta a cargas armonicas
+      y(i,:)=(Fmodal/Km(i,i))*D;
+
+    endif
     #CARGA PERIODICA
 
     #CARGA GENERICA
