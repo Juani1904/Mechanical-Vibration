@@ -32,11 +32,26 @@ function ejercicio1
 
   #Hallamos los autovalores, que son la raiz cuadrada de los valores propios. Armamos un vector columna tambien
   frecW=diag(lambda.^0.5);
+  #Printeamos los autovectores y frecuencias
+  disp("Los autovalores son: ");
+  disp(diag(lambda));
+  disp("Los modos o frecuencias naturales de cada nodo son: ");
+  disp(frecW);
+  disp("Los autovectores normalizados segun la matriz de masa son: ");
+  disp("\n")
+  for i=1:numGL
+    disp(Xnorm(:,i));
+    disp("\n")
+  endfor
   #Ahora normalizamos nuevamente los autovectores, pero esta vez respecto a su primer elemento
   for i = 1:length(Xnorm(:,1))
     XnormPrima(:,i) = Xnorm(:,i)/Xnorm(1,i);
   endfor
-
+  #Printeamos los autovectores normalizados segun el primer elemento
+  disp("Los autovectores normalizados segun su primer elemento son: ");
+  for i=1:numGL
+    disp(XnormPrima(:,i));
+  endfor
   #Creamos un vector de valores y que represente la altura de la torre y el paso por las masas
   ejeY=0:numGL;
   hold on
@@ -65,13 +80,16 @@ function ejercicio1
   frecWd=frecW.*(1-Ramort'.^2).^0.5; #La frecuencia de amortiguamiento
 
   %-----------------------------------CARGAS--------------------------------------
-  for i=1:numGL
-    disp(['Ingrese tipo de carga para GL',num2str(i),'1 Libre / 2 Armonica / 3 Periodica / 4 Generica ']);
-    tipoDeCarga=input("Ingrese 1, 2, 3 o 4: ");
+    #Segun el tipo de carga que nos encontremos en el vector de cargas el metodo que utilizaremos para resolver
+    tipoDeCarga=2;
+    #Si el vector de cargas es nulo, el movimiento del sistema en todos sus GL sera libre. Colocar 1
+    #Si el vector de carga tiene una o mas cargas armonicas, o combinacion entre 0 y cargas armonicas Coloca 2
+    #Si el vector de carga tiene una o mas cargas periodicas, o combinacion entre cargas armonicas, periodicas y 0 Coloca 3
+    #Si el vector de carga tiene cargas genericas o mezcla entre genericas, armonicas, periodicas y 0. Coloca 4
 
     #PARAMETROS GENERALES A COMPLETAR (SE DEBE MODIFICARRR)
 
-    tf=2*pi/frecW(1); #Tiempo final (introducir el valor al que se quiere obtener)
+    tf=10; #Tiempo final (introducir el valor al que se quiere obtener)
     dt=0.01; #Paso del tiempo
     #Entonces vamos a tener un paso del tiempo comun a todos los demas de:
     tiempo=0:dt:tf; #Esta variable no se modifica
@@ -79,46 +97,54 @@ function ejercicio1
     #Solamente se utiliza en sistema libre, cuando no sea ese el caso simplemente colocar 0 en ese GL
     x0=[0.3;-0.8;0.3];
     x0prima=[0;0;0];
-    #Vector de amplitudes de fuerza(Se usa para cargas armonicas). Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
-    AmplitudF=[0,0,5000];
-    #Vector de frecuencias forzadas(Se usa para cargas armonicas). Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
-    frecWf=[0,0,1.1*frecW(1)];
+    #Matriz de fuerza. Aca se discretizan las cargas de los 3 GL.
+    contador=1;
+    for t=tiempo
+      F(:,contador)=[5000*sin(1.1*frecW(1)*t),0,0];
+      contador++;
+    endfor
+
+    #Vector de frecuencias forzadas. Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
+    frecWf=[1.1*frecW(1),0,0];
 
 
-    #LIBRE
+    #LIBRE (SOLO CUANDO NO HAY CARGA EN NINGUN GL)
     if tipoDeCarga==1
       #Pasamos a coordenadas modales
       y0=Xnorm'*x0;
       y0prima=Xnorm'*x0prima;
-      contador=1;
-      for t=tiempo
-        y(i,contador)=(y0(i)*cos(frecWd(i)*t)+((y0prima(i)+Ramort(i)*frecW(i)*y0(i))/frecWd(i))*sin(frecWd(i)*t))*exp(-Ramort(i)*frecW(i)*t);
-        contador++;
+
+      for i=1:numGL
+        contador=1;
+        for t=tiempo
+          y(i,contador)=(y0(i)*cos(frecWd(i)*t)+((y0prima(i)+Ramort(i)*frecW(i)*y0(i))/frecWd(i))*sin(frecWd(i)*t))*exp(-Ramort(i)*frecW(i)*t);
+          contador++;
+        endfor
       endfor
     endif
 
     #CARGA ARMONICA
     if tipoDeCarga==2
-      #Discretizamos la carga
-      contador=1;
-      for t=tiempo
-        Fdiscreta(contador)=AmplitudF(i)*sin(frecWf(i)*t);
-        contador++;
-      endfor
-      #Pasamos la carga a coordenadas modales
-      Fmodal=Xnorm(:,i)'*Fdiscreta';
 
-      #Calculamos los parametros para posteriormente calcular y
-      beta=frecWf(i)/frecW(i);
-      D=1/(sqrt((1-beta^2)^2+(2*Ramort(i)*beta)^2));
-      #Calculamos la respuesta en coordenadas modales y con la formula correspondiente a respuesta a cargas armonicas
-      y(i,:)=(Fmodal/Km(i,i))*D;
+      #Pasamos la carga a coordenadas modales
+      Fmodal=Xnorm'*F;
+      for i=1:numGL
+        contador=1;
+        for t=tiempo
+          #Calculamos los parametros para posteriormente calcular y
+          beta=frecWf(i)/frecW(i);
+          D=1/(sqrt((1-beta^2)^2+(2*Ramort(i)*beta)^2));
+          #Calculamos la respuesta en coordenadas modales y con la formula correspondiente a respuesta a cargas armonicas
+          y(i,contador)=(Fmodal(i,contador)/Km(i,i))*D; #Esta formula se hace teniendo en cuenta que la division de una matriz por otra en realidad es el producto de una por la inversa de la otra
+          contador++;
+        endfor
+      endfor
 
     endif
+
     #CARGA PERIODICA
 
     #CARGA GENERICA
-  endfor
 
   #Ahora pasamos la respuesta y a coordenadas geometricas nuevamente
   respuestaX=Xnorm*y;
@@ -126,15 +152,15 @@ function ejercicio1
   figure(2);
   for i=1:numGL
     subplot(numGL,1,i)
-    plot(tiempo,diag(zeros(length(respuestaX))));
+    plot(tiempo,F(i,:));
     title(['Carga ',num2str(i)])
     xlabel("Tiempo")
     ylabel("Desplazamiento")
   endfor
   #Printeamos la respuesta del sistema (los 3 G.L), utilizando como eje de abscisas el tiempo y como ordenadas la respuesta en coord geometricas
   figure(3);
-  for i=1:3
-    subplot(3,1,i)
+  for i=1:numGL
+    subplot(numGL,1,i)
     plot(tiempo,respuestaX(i,:));
     title(['Grado de libertad ',num2str(i)])
     xlabel("Tiempo")
