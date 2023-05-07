@@ -1,4 +1,4 @@
-function ejercicio1
+function multiplesGrados
   clc
   clear all
   close all
@@ -49,8 +49,10 @@ function ejercicio1
   endfor
   #Printeamos los autovectores normalizados segun el primer elemento
   disp("Los autovectores normalizados segun su primer elemento son: ");
+  disp("\n")
   for i=1:numGL
     disp(XnormPrima(:,i));
+    disp("\n")
   endfor
   #Creamos un vector de valores y que represente la altura de la torre y el paso por las masas
   ejeY=0:numGL;
@@ -89,7 +91,7 @@ function ejercicio1
 
     #PARAMETROS GENERALES A COMPLETAR (SE DEBE MODIFICARRR)
 
-    tf=10; #Tiempo final (introducir el valor al que se quiere obtener)
+    tf=0.53928; #Tiempo final (introducir el valor al que se quiere obtener)
     dt=0.01; #Paso del tiempo
     #Entonces vamos a tener un paso del tiempo comun a todos los demas de:
     tiempo=0:dt:tf; #Esta variable no se modifica
@@ -97,22 +99,23 @@ function ejercicio1
     #Solamente se utiliza en sistema libre, cuando no sea ese el caso simplemente colocar 0 en ese GL
     x0=[0.3;-0.8;0.3];
     x0prima=[0;0;0];
-    #Matriz de fuerza. Aca se discretizan las cargas de los 3 GL.
+
+    #Vector de frecuencias forzadas y relacion beta. Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
+    frecWf=[1.1*frecW(3),0,0];
+    beta=frecWf./frecW;
     contador=1;
     for t=tiempo
-      F(:,contador)=[5000*sin(1.1*frecW(1)*t),0,0];
+      F(:,contador)=[5000*sin(frecWf(1)*t),0,0]; #Esta solo sirve para printear la carga
+      phi=atan((2*Ramort(1)*beta(1))/(1-beta(1)^2));
+      Fauxresp(:,contador)=[5000*sin(1.1*frecW(1)*t-phi),0,0]; #Esta es la que pasamos porque tiene el desfase
       contador++;
     endfor
-
-    #Vector de frecuencias forzadas. Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
-    frecWf=[1.1*frecW(1),0,0];
-
 
     #LIBRE (SOLO CUANDO NO HAY CARGA EN NINGUN GL)
     if tipoDeCarga==1
       #Pasamos a coordenadas modales
-      y0=Xnorm'*x0;
-      y0prima=Xnorm'*x0prima;
+      y0=Xnorm'*M*x0;
+      y0prima=Xnorm'*M*x0prima;
 
       for i=1:numGL
         contador=1;
@@ -127,17 +130,18 @@ function ejercicio1
     if tipoDeCarga==2
 
       #Pasamos la carga a coordenadas modales
-      Fmodal=Xnorm'*F;
+      Fmodal=Xnorm'*Fauxresp;
       for i=1:numGL
         contador=1;
         for t=tiempo
           #Calculamos los parametros para posteriormente calcular y
-          beta=frecWf(i)/frecW(i);
-          D=1/(sqrt((1-beta^2)^2+(2*Ramort(i)*beta)^2));
+          D=1/(sqrt((1-beta(i)^2)^2+(2*Ramort(i)*beta(i))^2));
           #Calculamos la respuesta en coordenadas modales y con la formula correspondiente a respuesta a cargas armonicas
           y(i,contador)=(Fmodal(i,contador)/Km(i,i))*D; #Esta formula se hace teniendo en cuenta que la division de una matriz por otra en realidad es el producto de una por la inversa de la otra
           contador++;
         endfor
+        #Adicionalmente creamos el vector de fases de cada modo
+        phi(i)=atan((2*Ramort(i)*beta(i))/(1-beta(i)^2));
       endfor
 
     endif
@@ -168,7 +172,13 @@ function ejercicio1
   endfor
   hold off
   #Entregamos el valor del ultimo punto (en tf)
-  disp(['El valor de todos los grados de libertad en el tiempo t= ',num2str(tf),' es: '])
+  disp(['El valor de desplazamiento de todos los grados de libertad en el tiempo t= ',num2str(tf),' es: '])
   disp(respuestaX(:,end));
+  if tipoDeCarga==2
+    disp("La fase de cada modo en radianes es: ");
+    disp(phi');
+    disp("La fase de cada modo en grados es: ");
+    disp(rad2deg(phi'));
+  endif
 
   endfunction
