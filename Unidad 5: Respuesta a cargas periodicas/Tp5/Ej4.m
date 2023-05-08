@@ -8,9 +8,9 @@ function cargaPeriodica
   k = 1000; #Rigidez del sistema
   m = 100; #Masa del sistema
   Ramort = 0.1; #Relacion de amortiguamiento zitta
-  Tp = 3*pi; #Periodo de la carga
+  Tp = 2*pi; #Periodo de la carga
   tf=20; #Tiempo final hasta el que queremos printear la carga y respuesta
-  numArmonicos = 10; %Numero de Armonicos
+  numArmonicos = 20; %Numero de Armonicos
   N = 1000; %Numero de puntos en los que discretizamos
   frecWf = 2*pi/Tp; #Frecuencia forzada.Si nos dan Tp calcularla asi, si no colocar el valor que nos dan
 
@@ -104,12 +104,12 @@ endfunction
 
 function y = P(t)
   %------------Parametros a modificar--------------%
-  Tp=3*pi;
-  Po=10;
+  Tp=2*pi;
+  Po=1;
   if(t>=0) && (t<=2*pi)
-    y=Po*sin((3*pi/Tp)*t);
+    y=(4/Tp)*t-1;
   else
-    y=0;
+    y=1-(4/Tp)*(t-(Tp/2));
   endif
   %------------------------------------------------------%
 

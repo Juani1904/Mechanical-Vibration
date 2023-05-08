@@ -5,19 +5,19 @@ function cargaPeriodica
 
   %---------Parametros a modificar------------------%
 
-  k = 1; #Rigidez del sistema
-  m = 100; #Masa del sistema
+  k = 40*pi^2; #Rigidez del sistema
+  m = 1; #Masa del sistema
   Ramort = 0; #Relacion de amortiguamiento zitta
-  Tp = 2*pi; #Periodo de la carga
-  tf=2*pi; #Tiempo final hasta el que queremos printear la carga y respuesta
-  numArmonicos = 4; %Numero de Armonicos
-  N = 360/30; %Numero de puntos en los que discretizamos
-  frecWf = 2*pi/Tp; #Frecuencia forzada.Si nos dan Tp calcularla asi, si no colocar el valor que nos dan
-  Po=1;
+  Tp = 0.3; #Periodo de la carga
+  tf=Tp; #Tiempo final hasta el que queremos printear la carga y respuesta
+  numArmonicos = 8; %Numero de Armonicos
+  dt=0.025;
+  Fo=40;
+  frecWf = (2*pi)/Tp; #Frecuencia forzada.Si nos dan Tp calcularla asi, si no colocar el valor que nos dan
 
   frecW = sqrt(k/m); #Frecuencia natural del sistema. La calculamos mediante k y m
-  beta = 1/(4/3); #Relacion de frecuencias
-  dt=Tp/N; %Paso del tiempo. Viene de Tp=N*dt
+  beta = frecWf/frecW; #Relacion de frecuencias
+  N = Tp/dt; %Numero de puntos en los que discretizamos
   tiempo =0:dt:Tp; #Este es el paso del tiempo para calcular la fuerza hasta su periodo. La usamos para calculas los coeficientes
   tiempoGrafica=0:dt:tf; #Este es el paso del tiempo para graficar la fuerza y la respuesta mas veces para cualquier tiempo
 
@@ -25,36 +25,37 @@ function cargaPeriodica
 
   #Ahora calculamos los coeficientes de fourier
   #Primero calculamos el coeficiente a0
+  #contador=1;
+    #for t=tiempo
+      #vectorP(contador)=P(t);
+      #contador++;
+    #endfor
+    a0=(4*Fo)/pi; #OJO,mirar bien el ejercicio con este valor porque confunde
   contador=1;
-    for t=tiempo
-      vectorP(contador)=P(t);
-      contador++;
-    endfor
-    a0=(2/Tp)*trapz(dt,vectorP);
-
-  for i=1:numArmonicos
-    contador=1;
-    for t=tiempo
+  for i=2:2:numArmonicos
+    #for t=tiempo
       #Ahora seteamos la matriz A y B, cuyas filas corresponden al numero de armonicos y columnas la discretizacion
       #en el intervalo determinado por el vector t. Estas son las funciones que luego integramos con el metodo del trapecio
-      A(i,contador)=P(t)*cos(frecWf*i*t); #Esta es un producto de funciones en forma discreta
-      B(i,contador)=P(t)*sin(frecWf*i*t); #Esto es un producto de funciones en forma discreta
-      contador++;
-    endfor
+      #A(i,contador)=P(t)*cos(frecWf*i*t); #Esta es un producto de funciones en forma discreta
+      #B(i,contador)=P(t)*sin(frecWf*i*t); #Esto es un producto de funciones en forma discreta
+      #contador++;
+    #endfor
     #Ahora calculamos los coeficientes am y bm para cada armonico
-    am(i)=0; #Para cada modo esto es un escalar
-    bm(i)=-((2*Po)/(i*pi))*(-1)^i; #Para cada modo esto es un escalar
+    am(contador)=-((4*Fo)/(pi*(i^2-1))); #Para cada modo esto es un escalar
+    bm(contador)=0; #Para cada modo esto es un escalar
+    contador++;
     #La funcion trapz calcula la integral numerica de A y B por el metodo del trapecio con un paso de tiempo dt
   endfor
-
   %-------------------------APROXIMACION DE LA CARGA-----------------------------------%
   #Una vez calculado los numArmonicos armonicos, podemos aplicar la serie trigonometrica de Fourier para aproximar nuestra funcion
   #Aca si usamos el tiempoGrafica, para printear la carga y respuesta hasta el tiempo que queramos
   contador=1;
   for t=tiempoGrafica
     sumaAuxiliarFourier=a0/2;
-    for i=1:numArmonicos
-      sumaAuxiliarFourier=sumaAuxiliarFourier+am(i)*cos(frecWf*i*t)+bm(i)*sin(frecWf*i*t);
+    contador2=1;
+    for i=2:2:numArmonicos
+      sumaAuxiliarFourier=sumaAuxiliarFourier+am(contador2)*cos(frecWf*i*t)+bm(contador2)*sin(frecWf*i*t);
+      contador2++;
     endfor
     cargaFourier(contador)=sumaAuxiliarFourier;
     contador++;
@@ -65,13 +66,15 @@ function cargaPeriodica
   contador=1;
   for t=tiempoGrafica
     sumaAuxiliarRespuestaFourier=a0/(2*k);
-    for i=1:numArmonicos
+    contador2=1;
+    for i=2:2:numArmonicos
       #Primero calculamos los parametros Dm y titam
       tanTita=(2*Ramort*beta*i)/(1-(beta*i)^2);
       tita=atan(tanTita);
       Dm=1/sqrt(((1-(beta*i)^2)^2)+(2*Ramort*beta*i)^2);
       #Ahora la serie de fourier
-      sumaAuxiliarRespuestaFourier=sumaAuxiliarRespuestaFourier+(1/k)*(am(i)*Dm*cos(frecWf*i*t-tita)+bm(i)*Dm*sin(frecWf*i*t-tita));
+      sumaAuxiliarRespuestaFourier=sumaAuxiliarRespuestaFourier+(1/k)*(am(contador2)*Dm*cos(frecWf*i*t-tita)+bm(contador2)*Dm*sin(frecWf*i*t-tita));
+      contador2++;
     endfor
     respuestaFourier(contador)=sumaAuxiliarRespuestaFourier;
     contador++;
@@ -82,6 +85,10 @@ function cargaPeriodica
   disp(cargaFourier(end));
   disp(['El valor de la respuesta en el instante tf= ',num2str(tf),'s es:'])
   disp(respuestaFourier(end));
+  disp(['El vector de carga aproximado hasta tf= ',num2str(tf),'s es:'])
+  disp(cargaFourier);
+  disp(['El vector de respuesta aproximado hasta tf= ',num2str(tf),'s es:'])
+  disp(respuestaFourier);
 
   %--------------------------PLOTEO------------------------------------%
   figure(1)
@@ -90,7 +97,7 @@ function cargaPeriodica
   grid on
   #plot(tiempo,vectorP,'b');
   plot(tiempoGrafica,cargaFourier,'r');
-  title('Aprox con Fourier');
+  title('Carga real y aprox con Fourier');
   xlabel('Tiempo');
   ylabel('Desplazamiento');
   hold off
@@ -105,12 +112,12 @@ endfunction
 
 function y = P(t)
   %------------Parametros a modificar--------------%
-  Tp=10;
+  Tp=3*pi;
   Po=10;
-  if (t>=0) && (t<Tp/2)
-    y=Po;
+  if(t>=0) && (t<=2*pi)
+    y=Po*sin((3*pi/Tp)*t);
   else
-    y=-Po/2;
+    y=0;
   endif
   %------------------------------------------------------%
 
