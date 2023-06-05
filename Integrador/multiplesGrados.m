@@ -6,24 +6,36 @@ function multiplesGrados
   %----------------------------SISTEMA----------------------------------------------
 
   #Lo primero que hacemos es tomar los datos que nos proporciona el ejercicio
-  m=2;
-  k1=600;
-  k2=1200;
-  k3=2400;
-  Ramort=[0.1,0.2,0.1]; #Asignar los valores de zitta (relacion de amortiguamiento) si los tuviera
+  ms=38500;
+  J=2.446e6;
+  m1=4330;
+  m2=m1;
+  a1=4.2;
+  a2=a1;
+  ks1=2.535e6;
+  ks2=ks1;
+  cs1=1.97e5;
+  cs2=cs1;
+  kt1=4.28e6;
+  kt2=kt1;
+  ct1=9.8e4;
+  ct2=ct1;
+  Ramort=[0.1,0.1,0.02,0.02]; #Asignar los valores de zitta (relacion de amortiguamiento) si los tuviera
   #En este caso se trata de un oscilador que consta de varias masas
   #Lo modelamos con un carrito con 3 resortes de distinta rigidez k y la misma masas
   #Primero debemos hallar la ecuacion de movimiento en papel mediante algun metodo
 
 
   #Armamos las matrices M y K
-  M=[m 0 0;
-     0 m 0;
-     0 0 m];
+  M=[J 0 0 0;
+     0 ms 0 0;
+     0 0 m1 0;
+     0 0 0 m2];
 
-  K=[(k2+k3) -k2 0;
-     -k2 (k1+k2) -k1
-      0 -k1 k1];
+  K=[((a1^2)*ks1+(a2^2)*ks2) a1*ks1-a2*ks2 -a1*ks1 a2*ks2;
+    a1*ks1-a2*ks2 ks1+ks2 -ks1 -ks2;
+   -a1*ks1 -ks1 ks1+kt1 0;
+  a2*ks2 -ks2 0 ks2+kt2];
   #Asignamos una variable que sera el orden de la matriz cuadrada
   numGL=size(M)(1);
 
@@ -83,7 +95,7 @@ function multiplesGrados
 
   %-----------------------------------CARGAS--------------------------------------
     #Segun el tipo de carga que nos encontremos en el vector de cargas el metodo que utilizaremos para resolver
-    tipoDeCarga=1;
+    tipoDeCarga=2;
     #Si el vector de cargas es nulo, el movimiento del sistema en todos sus GL sera libre. Colocar 1
     #Si el vector de carga tiene una o mas cargas armonicas, o combinacion entre 0 y cargas armonicas Coloca 2
     #Si el vector de carga tiene una o mas cargas periodicas, o combinacion entre cargas armonicas, periodicas y 0 Coloca 3
@@ -91,23 +103,27 @@ function multiplesGrados
 
     #PARAMETROS GENERALES A COMPLETAR (SE DEBE MODIFICARRR)
 
-    tf=4; #Tiempo final (introducir el valor al que se quiere obtener)
-    dt=0.01; #Paso del tiempo
+    tf=2; #Tiempo final (introducir el valor al que se quiere obtener)
+    dt=0.001; #Paso del tiempo
     #Entonces vamos a tener un paso del tiempo comun a todos los demas de:
     tiempo=0:dt:tf; #Esta variable no se modifica
 
     #Solamente se utiliza en sistema libre, cuando no sea ese el caso simplemente colocar 0 en ese GL
-    x0=[0.3;-0.8;0.3];
-    x0prima=[0;0;0];
+    x0=[0;0;0;0];
+    x0prima=[0;0;0;0];
 
     #Vector de frecuencias forzadas y relacion beta. Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
-    frecWf=[1.1*frecW(3),0,0];
+    longOnda=0.1; #Longitud de onda en metros
+    velMovil=40*1000/3600; #Velocidad movil en metros por segundo
+
+    frecWf=[0,0,2*pi*velMovil/longOnda,2*pi*velMovil/longOnda];
     beta=frecWf./frecW;
     contador=1;
     for t=tiempo
-      F(:,contador)=[5000*sin(frecWf(1)*t),0,0]; #Esta solo sirve para printear la carga
-      phi=atan((2*Ramort(1)*beta(1))/(1-beta(1)^2));
-      Fauxresp(:,contador)=[5000*sin(1.1*frecW(1)*t-phi),0,0]; #Esta es la que pasamos porque tiene el desfase
+      F(:,contador)=[0,0,(t<= 1.501)*0.03*sin(frecWf(3)*t),(t>= 0.729 && 2.2292>t)*0.03*sin(frecWf(4)*t)]; #Esta solo sirve para printear la carga
+      phi3=atan((2*Ramort(3)*beta(3))/(1-beta(3)^2));
+      phi4=atan((2*Ramort(4)*beta(4))/(1-beta(4)^2));
+      Fauxresp(:,contador)=[0,0,(t<= 1.501)*0.03*sin(frecWf(3)*t-phi3),(t>= 0.729 && 2.2292>t)*0.03*sin(frecWf(4)*t-phi4)]; #Esta es la que pasamos porque tiene el desfase
       contador++;
     endfor
 
@@ -165,7 +181,7 @@ function multiplesGrados
   figure(3);
   for i=1:numGL
     subplot(numGL,1,i)
-    plot(tiempo,respuestaX(i,:));
+    plot(tiempo,y(i,:));
     title(['Grado de libertad ',num2str(i)])
     xlabel("Tiempo")
     ylabel("Desplazamiento")

@@ -2,28 +2,30 @@ function multiplesGrados
   clc
   clear all
   close all
-
+  pkg load signal
   %----------------------------SISTEMA----------------------------------------------
 
   #Lo primero que hacemos es tomar los datos que nos proporciona el ejercicio
-  m=2;
-  k1=600;
-  k2=1200;
-  k3=2400;
-  Ramort=[0.1,0.2,0.1]; #Asignar los valores de zitta (relacion de amortiguamiento) si los tuviera
+  W=15569
+  m=W/10;
+  r=1.22;
+  J=m*r^2;
+  k1=29400;
+  k2=35280;
+  l1=1.3411;
+  l2=1.70;
+  Ramort=[0,0]; #Asignar los valores de zitta (relacion de amortiguamiento) si los tuviera
   #En este caso se trata de un oscilador que consta de varias masas
   #Lo modelamos con un carrito con 3 resortes de distinta rigidez k y la misma masas
   #Primero debemos hallar la ecuacion de movimiento en papel mediante algun metodo
 
 
   #Armamos las matrices M y K
-  M=[m 0 0;
-     0 m 0;
-     0 0 m];
+  M=[m 0;
+     0 J];
 
-  K=[(k2+k3) -k2 0;
-     -k2 (k1+k2) -k1
-      0 -k1 k1];
+  K=[(k1+k2) (k1*l1-k2*l2);
+      (k1*l1-k2*l2) (k1*l1^2+k2*l2^2)];
   #Asignamos una variable que sera el orden de la matriz cuadrada
   numGL=size(M)(1);
 
@@ -35,6 +37,8 @@ function multiplesGrados
   #Printeamos los autovectores y frecuencias
   disp("Los autovalores son: ");
   disp(diag(lambda));
+  disp("La matriz modal es: ");
+  disp(Xnorm);
   disp("Los modos o frecuencias naturales de cada nodo son: ");
   disp(frecW);
   disp("Los autovectores normalizados segun la matriz de masa son: ");
@@ -90,24 +94,24 @@ function multiplesGrados
     #Si el vector de carga tiene cargas genericas o mezcla entre genericas, armonicas, periodicas y 0. Coloca 4
 
     #PARAMETROS GENERALES A COMPLETAR (SE DEBE MODIFICARRR)
-
-    tf=4; #Tiempo final (introducir el valor al que se quiere obtener)
+    ti=0.05; #Esto es para encontrar el maximo en el intervalo
+    tf=1.5; #Tiempo final (introducir el valor al que se quiere obtener)
     dt=0.01; #Paso del tiempo
     #Entonces vamos a tener un paso del tiempo comun a todos los demas de:
     tiempo=0:dt:tf; #Esta variable no se modifica
 
     #Solamente se utiliza en sistema libre, cuando no sea ese el caso simplemente colocar 0 en ese GL
-    x0=[0.3;-0.8;0.3];
-    x0prima=[0;0;0];
+    x0=[0.1;0];
+    x0prima=[0;0];
 
     #Vector de frecuencias forzadas y relacion beta. Colocar la fuerza en el modo que corresponda, en otro caso dejar en 0)
-    frecWf=[1.1*frecW(3),0,0];
+    frecWf=[0,0];
     beta=frecWf./frecW;
     contador=1;
     for t=tiempo
-      F(:,contador)=[5000*sin(frecWf(1)*t),0,0]; #Esta solo sirve para printear la carga
+      F(:,contador)=[0,0]; #Esta solo sirve para printear la carga
       phi=atan((2*Ramort(1)*beta(1))/(1-beta(1)^2));
-      Fauxresp(:,contador)=[5000*sin(1.1*frecW(1)*t-phi),0,0]; #Esta es la que pasamos porque tiene el desfase
+      Fauxresp(:,contador)=[0,0]; #Esta es la que pasamos porque tiene el desfase
       contador++;
     endfor
 
@@ -116,6 +120,11 @@ function multiplesGrados
       #Pasamos a coordenadas modales
       y0=Xnorm'*M*x0;
       y0prima=Xnorm'*M*x0prima;
+      disp('Las condiciones iniciales en coordenadas modales en radianes son:');
+      disp('y0=');
+      disp(y0);
+      disp('y0prima=');
+      disp(y0prima);
 
       for i=1:numGL
         contador=1;
@@ -181,4 +190,19 @@ function multiplesGrados
     disp(rad2deg(phi'));
   endif
 
+  #Filtramos la señal para que solo muestre valores positivos
+  #Primero filtramos los valores negativos y nos quedamos solo con los positivos
+  index1=1;
+  index2=1;
+  for t=tiempo
+    if respuestaX(1,index2) > 0
+      respuestaXPositiva(index1)=respuestaX(1,index2);
+      tiempoPositivo(index1)=t;
+      index1++;
+    endif
+    index2++;
+  endfor
+  [picos,index] = findpeaks(respuestaXPositiva);
+
+  disp(['En el intervalo ',num2str(ti),' y ',num2str(tf),' se hallo un valor max de ',num2str(max(picos)),' a los t=',num2str(tiempoPositivo(index(1))),' segs']);
   endfunction
